@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz: As Ideias de Maria Montessori</title>
+    <title>Cenário Interativo: O Método Montessori em Ação</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,7 @@
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             transition: all 0.3s ease-in-out;
         }
-        .btn {
+        .btn-choice {
             display: block;
             width: 100%;
             text-align: left;
@@ -32,22 +32,26 @@
             transition: all 0.2s ease-in-out;
             cursor: pointer;
         }
-        .btn:hover {
+        .btn-choice:hover:not(:disabled) {
             background-color: #f3f4f6;
             border-color: #9ca3af;
         }
-        .btn.correct {
-            background-color: #d1fae5;
-            border-color: #10b981;
-            color: #065f46;
-        }
-        .btn.incorrect {
-            background-color: #fee2e2;
-            border-color: #ef4444;
-            color: #991b1b;
-        }
-        .btn:disabled {
+        .btn-choice:disabled {
             cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .feedback-card {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .feedback-correct {
+            background-color: #d1fae5;
+            border: 1px solid #10b981;
+        }
+        .feedback-incorrect {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
         }
     </style>
 </head>
@@ -56,205 +60,172 @@
     <div id="game-container" class="max-w-2xl w-full">
         <!-- Tela Inicial -->
         <div id="start-screen" class="card text-center">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Quiz: Maria Montessori</h1>
-            <p class="text-gray-600 mb-6">Teste seus conhecimentos sobre o método Montessori e sua abordagem única para a educação infantil.</p>
-            <button id="start-btn" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors">Começar o Jogo</button>
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Cenário Interativo Montessori</h1>
+            <div class="text-left bg-gray-100 p-4 rounded-lg mb-6 border border-gray-200">
+                <p class="font-bold">Situação Geral:</p>
+                <p class="text-gray-700">Você foi transferido para o Colégio Militar de Brasília e foi designado para a função de docente dos alunos do 5º ano do fundamental.</p>
+            </div>
+             <p class="text-left font-bold">Situação Particular:</p>
+            <p class="text-gray-600 mb-6 text-left">Você está em sala de aula e deve aplicar os conceitos de Montessori, adaptados para esta faixa etária, respondendo às questões dos cenários a seguir. Boa sorte!</p>
+            <button id="start-btn" class="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-colors">Começar</button>
         </div>
 
-        <!-- Tela do Quiz -->
-        <div id="quiz-screen" class="card hidden">
-            <div id="question-container">
-                <p class="text-sm font-semibold text-teal-600 mb-2" id="question-counter"></p>
-                <h2 class="text-2xl font-bold text-gray-800 mb-6" id="question-text"></h2>
-                <div id="answer-buttons" class="grid grid-cols-1 gap-3">
-                    <!-- Botões de resposta serão inseridos aqui -->
+        <!-- Tela do Cenário -->
+        <div id="scenario-screen" class="card hidden">
+            <p class="text-sm font-semibold text-emerald-600 mb-2" id="scenario-counter"></p>
+            <div id="scenario-container">
+                <p class="text-xl font-medium text-gray-700 mb-6" id="scenario-text"></p>
+                <div id="choice-buttons">
+                    <!-- Botões de escolha serão inseridos aqui -->
                 </div>
             </div>
-            <div id="feedback-container" class="mt-6 hidden">
-                 <p class="text-gray-700 p-4 bg-gray-50 rounded-lg border border-gray-200" id="explanation-text"></p>
+            <div id="feedback-container" class="hidden">
+                 <div id="feedback-card" class="feedback-card">
+                    <h3 id="feedback-title" class="font-bold text-lg mb-2"></h3>
+                    <p id="feedback-text" class="text-gray-800"></p>
+                 </div>
             </div>
-            <button id="next-btn" class="w-full mt-6 bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 transition-colors hidden">Próxima Pergunta</button>
+            <button id="next-btn" class="w-full mt-6 bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 transition-colors hidden">Próximo Cenário</button>
         </div>
 
         <!-- Tela Final -->
         <div id="end-screen" class="card text-center hidden">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Fim de Jogo!</h1>
-            <p class="text-gray-600 mb-4">Sua pontuação final foi:</p>
-            <p class="text-5xl font-extrabold text-teal-600 mb-6" id="score-text"></p>
-            <div class="text-left bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                <h3 class="font-bold text-lg mb-2">Resumo das Ideias de Montessori:</h3>
-                <ul class="list-disc list-inside text-gray-700 space-y-1">
-                    <li><strong>Autoeducação:</strong> A criança é capaz de aprender por si mesma, guiada por seus interesses naturais.</li>
-                    <li><strong>Ambiente Preparado:</strong> A sala de aula deve ser organizada, acessível e equipada com materiais específicos para promover a autonomia.</li>
-                    <li><strong>Adulto Preparado:</strong> O professor atua como um guia, observando a criança e conectando-a com o ambiente, sem interferir desnecessariamente.</li>
-                    <li><strong>Períodos Sensíveis:</strong> Fases em que a criança tem uma sensibilidade especial para aprender determinadas habilidades.</li>
-                </ul>
-            </div>
-            <button id="restart-btn" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors">Jogar Novamente</button>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Parabéns!</h1>
+            <p class="text-gray-600 mb-6">Você completou todos os cenários. O método Montessori se baseia na observação, no respeito pela autonomia da criança e na preparação cuidadosa do ambiente e do adulto.</p>
+            <button id="restart-btn" class="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-colors">Jogar Novamente</button>
         </div>
     </div>
 
     <script>
         // Elementos da UI
         const startScreen = document.getElementById('start-screen');
-        const quizScreen = document.getElementById('quiz-screen');
+        const scenarioScreen = document.getElementById('scenario-screen');
         const endScreen = document.getElementById('end-screen');
 
         const startBtn = document.getElementById('start-btn');
         const nextBtn = document.getElementById('next-btn');
         const restartBtn = document.getElementById('restart-btn');
 
-        const questionCounterEl = document.getElementById('question-counter');
-        const questionTextEl = document.getElementById('question-text');
-        const answerButtonsEl = document.getElementById('answer-buttons');
+        const scenarioCounterEl = document.getElementById('scenario-counter');
+        const scenarioTextEl = document.getElementById('scenario-text');
+        const choiceButtonsEl = document.getElementById('choice-buttons');
+        
         const feedbackContainer = document.getElementById('feedback-container');
-        const explanationTextEl = document.getElementById('explanation-text');
-        const scoreTextEl = document.getElementById('score-text');
+        const feedbackCard = document.getElementById('feedback-card');
+        const feedbackTitleEl = document.getElementById('feedback-title');
+        const feedbackTextEl = document.getElementById('feedback-text');
 
-        // Dados do Quiz
-        const questions = [
+        // Dados dos Cenários
+        const scenarios = [
             {
-                question: 'Qual é o princípio fundamental do método Montessori, que acredita na capacidade inata da criança de aprender?',
-                answers: [
-                    { text: 'Instrução direta', correct: false },
-                    { text: 'Aprendizagem cooperativa', correct: false },
-                    { text: 'Autoeducação', correct: true },
-                    { text: 'Memorização', correct: false }
-                ],
-                explanation: 'A autoeducação é central no método. Montessori acreditava que, em um ambiente adequado, a criança é a protagonista de seu próprio aprendizado.'
+                scenario: "Dois alunos em um grupo de pesquisa sobre a Grécia Antiga discutem. Um quer focar na mitologia e nos deuses, o outro na engenharia dos templos. A discussão está acalorada. O que você faz?",
+                choices: [
+                    { text: "Intervém e sugere que pesquisem como a mitologia e as crenças influenciaram a arquitetura dos templos, unindo os dois interesses.", correct: true, feedback: "Correto! Você atuou como guia, ajudando-os a usar o raciocínio para encontrar uma conexão entre os temas (Educação Cósmica) e a resolver o conflito de forma colaborativa." },
+                    { text: "Define que o tema será engenharia, por ser mais 'acadêmico', e diz ao outro aluno para aceitar a decisão.", correct: false, feedback: "Esta ação desrespeita o interesse genuíno de um aluno e impõe sua autoridade, em vez de estimular a negociação e a descoberta intelectual." },
+                    { text: "Separa os dois e manda cada um fazer uma pesquisa individual sobre o tema que prefere.", correct: false, feedback: "Embora resolva o conflito imediato, esta ação desperdiça uma oportunidade valiosa de desenvolver habilidades sociais e de colaboração, essenciais nesta fase." }
+                ]
             },
             {
-                question: 'No método Montessori, como é chamado o espaço cuidadosamente organizado para promover a independência da criança?',
-                answers: [
-                    { text: 'Sala de jogos', correct: false },
-                    { text: 'Ambiente preparado', correct: true },
-                    { text: 'Laboratório de ciências', correct: false },
-                    { text: 'Canto da leitura', correct: false }
-                ],
-                explanation: 'O "ambiente preparado" é um espaço com móveis do tamanho da criança e materiais específicos organizados de forma acessível para que ela possa escolher suas atividades.'
+                scenario: "Um grupo de alunos, que tem liberdade para gerenciar seu tempo, está usando o período de pesquisa para conversar e não está avançando no projeto. Como você age?",
+                choices: [
+                    { text: "Retira a liberdade do grupo e passa a ditar cada tarefa que eles devem fazer, com horários rígidos.", correct: false, feedback: "Esta abordagem é punitiva e remove a oportunidade de os alunos desenvolverem responsabilidade e autogestão. A liberdade com responsabilidade é um pilar do método." },
+                    { text: "Reúne o grupo para uma conversa particular. Apresenta suas observações e pergunta qual é o plano deles para atingir os objetivos, guiando-os a criar um cronograma próprio.", correct: true, feedback: "Perfeito! Você os trata com respeito, incentiva a autoavaliação e os torna responsáveis por sua própria liberdade e gerenciamento de tempo, desenvolvendo a função executiva." },
+                    { text: "Chama a atenção do grupo na frente de toda a turma, dizendo que estão sendo irresponsáveis.", correct: false, feedback: "A repreensão pública pode causar humilhação e ressentimento, sendo pouco eficaz para construir a motivação interna e a responsabilidade que se busca nesta fase." }
+                ]
             },
             {
-                question: 'Qual o papel do professor em uma sala de aula Montessori?',
-                answers: [
-                    { text: 'Transmitir todo o conhecimento', correct: false },
-                    { text: 'Aplicar provas e testes constantemente', correct: false },
-                    { text: 'Atuar como um guia e observador', correct: true },
-                    { text: 'Manter a disciplina de forma rígida', correct: false }
-                ],
-                explanation: 'O professor montessoriano é um "guia" ou "diretor". Sua função é observar a criança, apresentar os materiais e interferir o mínimo possível no processo de descoberta dela.'
-            },
-            {
-                question: 'A "Torre Rosa" é um material Montessori clássico. Qual habilidade ela visa desenvolver principalmente?',
-                answers: [
-                    { text: 'Reconhecimento de cores', correct: false },
-                    { text: 'Habilidades de escrita', correct: false },
-                    { text: 'Discriminação visual de tamanho', correct: true },
-                    { text: 'Conceitos musicais', correct: false }
-                ],
-                explanation: 'A Torre Rosa consiste em 10 cubos de tamanhos diferentes que a criança empilha. O material desenvolve a percepção visual das dimensões e a coordenação motora.'
-            },
-             {
-                question: 'O que são os "períodos sensíveis" na teoria de Montessori?',
-                answers: [
-                    { text: 'Momentos em que a criança está mais sensível emocionalmente.', correct: false },
-                    { text: 'Fases transitórias de intenso interesse por aprender algo específico.', correct: true },
-                    { text: 'Os horários do dia em que a criança aprende melhor.', correct: false },
-                    { text: 'Períodos de avaliação do desenvolvimento infantil.', correct: false }
-                ],
-                explanation: 'Os períodos sensíveis são "janelas de oportunidade" em que a criança demonstra um interesse e uma facilidade enormes para adquirir certas habilidades, como linguagem, movimento ou ordem.'
+                scenario: "Durante uma apresentação sobre o sistema solar, um aluno pergunta: 'Se a ciência explica o Big Bang, então a história da criação que minha religião ensina está errada?'. Qual a sua intervenção?",
+                choices: [
+                    { text: "Valida a profundidade da pergunta e explica que ciência e religião são áreas diferentes do conhecimento, que buscam responder a tipos diferentes de questões. Sugere uma pesquisa sobre como diferentes culturas veem a origem do universo.", correct: true, feedback: "Excelente! Você respeita a bagagem cultural do aluno, não cria um conflito entre fé e ciência, e usa a curiosidade dele como um trampolim para uma pesquisa mais ampla e filosófica, nutrindo sua mente racional." },
+                    { text: "Responde que, na aula de ciências, o que vale é a explicação científica e que assuntos de religião devem ser discutidos em outro lugar.", correct: false, feedback: "Esta resposta invalida a dúvida do aluno e cria uma barreira artificial, perdendo a chance de uma discussão rica que conecte diferentes áreas do saber humano." },
+                    { text: "Tenta dar uma resposta definitiva, explicando por que uma visão está 'certa' e a outra 'errada'.", correct: false, feedback: "Impor uma visão sobre um tema tão complexo e pessoal não é o papel do guia. O objetivo é dar ao aluno ferramentas para que ele possa pensar por si mesmo, não lhe dar respostas prontas." }
+                ]
             }
         ];
 
-        let currentQuestionIndex = 0;
-        let score = 0;
+        let currentScenarioIndex = 0;
 
         // Funções do Jogo
         function startGame() {
-            currentQuestionIndex = 0;
-            score = 0;
+            currentScenarioIndex = 0;
             startScreen.classList.add('hidden');
             endScreen.classList.add('hidden');
-            quizScreen.classList.remove('hidden');
-            nextBtn.classList.add('hidden');
-            showQuestion();
+            scenarioScreen.classList.remove('hidden');
+            showScenario();
         }
 
-        function showQuestion() {
+        function showScenario() {
             resetState();
-            const currentQuestion = questions[currentQuestionIndex];
-            questionCounterEl.innerText = `Pergunta ${currentQuestionIndex + 1} de ${questions.length}`;
-            questionTextEl.innerText = currentQuestion.question;
+            const currentScenario = scenarios[currentScenarioIndex];
+            scenarioCounterEl.innerText = `Cenário ${currentScenarioIndex + 1} de ${scenarios.length}`;
+            scenarioTextEl.innerText = currentScenario.scenario;
 
-            currentQuestion.answers.forEach(answer => {
+            currentScenario.choices.forEach(choice => {
                 const button = document.createElement('button');
-                button.innerText = answer.text;
-                button.classList.add('btn');
-                if (answer.correct) {
-                    button.dataset.correct = answer.correct;
-                }
-                button.addEventListener('click', selectAnswer);
-                answerButtonsEl.appendChild(button);
+                button.innerText = choice.text;
+                button.classList.add('btn-choice');
+                button.dataset.correct = choice.correct;
+                button.dataset.feedback = choice.feedback;
+                button.addEventListener('click', selectChoice);
+                choiceButtonsEl.appendChild(button);
             });
         }
 
         function resetState() {
             nextBtn.classList.add('hidden');
             feedbackContainer.classList.add('hidden');
-            while (answerButtonsEl.firstChild) {
-                answerButtonsEl.removeChild(answerButtonsEl.firstChild);
+            while (choiceButtonsEl.firstChild) {
+                choiceButtonsEl.removeChild(choiceButtonsEl.firstChild);
             }
         }
 
-        function selectAnswer(e) {
+        function selectChoice(e) {
             const selectedBtn = e.target;
             const isCorrect = selectedBtn.dataset.correct === 'true';
+            const feedback = selectedBtn.dataset.feedback;
 
             if (isCorrect) {
-                score++;
+                feedbackCard.classList.remove('feedback-incorrect');
+                feedbackCard.classList.add('feedback-correct');
+                feedbackTitleEl.innerText = "Resposta Correta!";
+            } else {
+                feedbackCard.classList.remove('feedback-correct');
+                feedbackCard.classList.add('feedback-incorrect');
+                feedbackTitleEl.innerText = "Abordagem Alternativa";
             }
-
-            // Mostra o feedback visual
-            Array.from(answerButtonsEl.children).forEach(button => {
-                if (button.dataset.correct === 'true') {
-                    button.classList.add('correct');
-                } else {
-                    button.classList.add('incorrect');
-                }
-                button.disabled = true; // Desabilita todos os botões
-            });
-
-            // Mostra a explicação
-            explanationTextEl.innerText = questions[currentQuestionIndex].explanation;
+            
+            feedbackTextEl.innerText = feedback;
             feedbackContainer.classList.remove('hidden');
 
-            // Mostra o botão de próxima
-            if (questions.length > currentQuestionIndex + 1) {
-                nextBtn.innerText = "Próxima Pergunta";
-                nextBtn.classList.remove('hidden');
+            Array.from(choiceButtonsEl.children).forEach(button => {
+                button.disabled = true;
+            });
+
+            if (scenarios.length > currentScenarioIndex + 1) {
+                nextBtn.innerText = "Próximo Cenário";
             } else {
-                nextBtn.innerText = "Ver Resultado";
-                nextBtn.classList.remove('hidden');
+                nextBtn.innerText = "Finalizar";
             }
+            nextBtn.classList.remove('hidden');
         }
 
-        function showNextQuestion() {
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                showQuestion();
+        function handleNext() {
+            currentScenarioIndex++;
+            if (currentScenarioIndex < scenarios.length) {
+                showScenario();
             } else {
                 showEndScreen();
             }
         }
         
         function showEndScreen() {
-            quizScreen.classList.add('hidden');
+            scenarioScreen.classList.add('hidden');
             endScreen.classList.remove('hidden');
-            scoreTextEl.innerText = `${score} / ${questions.length}`;
         }
 
         // Event Listeners
         startBtn.addEventListener('click', startGame);
-        nextBtn.addEventListener('click', showNextQuestion);
+        nextBtn.addEventListener('click', handleNext);
         restartBtn.addEventListener('click', startGame);
 
     </script>
