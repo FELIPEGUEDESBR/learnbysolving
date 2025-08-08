@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz: As Ideias de Lawrence Stenhouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 0.75rem;
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        .btn.correct {
+            background-color: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
+        }
+        .btn.incorrect {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+        .btn:disabled {
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="max-w-2xl w-full">
+        <!-- Tela Inicial -->
+        <div id="start-screen" class="card text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Quiz: Lawrence Stenhouse</h1>
+            <p class="text-gray-600 mb-6">Teste seus conhecimentos sobre um dos mais influentes pensadores da educação e sua visão sobre o currículo e o papel do professor.</p>
+            <button id="start-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Começar o Jogo</button>
+        </div>
+
+        <!-- Tela do Quiz -->
+        <div id="quiz-screen" class="card hidden">
+            <div id="question-container">
+                <p class="text-sm font-semibold text-blue-600 mb-2" id="question-counter"></p>
+                <h2 class="text-2xl font-bold text-gray-800 mb-6" id="question-text"></h2>
+                <div id="answer-buttons" class="grid grid-cols-1 gap-3">
+                    <!-- Botões de resposta serão inseridos aqui -->
+                </div>
+            </div>
+            <div id="feedback-container" class="mt-6 hidden">
+                 <p class="text-gray-700 p-4 bg-gray-50 rounded-lg border border-gray-200" id="explanation-text"></p>
+            </div>
+            <button id="next-btn" class="w-full mt-6 bg-gray-800 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-900 transition-colors hidden">Próxima Pergunta</button>
+        </div>
+
+        <!-- Tela Final -->
+        <div id="end-screen" class="card text-center hidden">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Fim de Jogo!</h1>
+            <p class="text-gray-600 mb-4">Sua pontuação final foi:</p>
+            <p class="text-5xl font-extrabold text-blue-600 mb-6" id="score-text"></p>
+            <div class="text-left bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                <h3 class="font-bold text-lg mb-2">Resumo das Ideias de Stenhouse:</h3>
+                <ul class="list-disc list-inside text-gray-700 space-y-1">
+                    <li><strong>Currículo como Processo:</strong> O currículo não é um produto final, mas uma hipótese a ser testada e aprimorada pelo professor em sala de aula.</li>
+                    <li><strong>Professor como Pesquisador:</strong> O professor deve investigar a própria prática para desenvolver o currículo e a si mesmo profissionalmente.</li>
+                    <li><strong>Desenvolvimento Profissional:</strong> "Não há desenvolvimento de currículo sem o desenvolvimento do professor."</li>
+                </ul>
+            </div>
+            <button id="restart-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        // Elementos da UI
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const endScreen = document.getElementById('end-screen');
+
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        const questionCounterEl = document.getElementById('question-counter');
+        const questionTextEl = document.getElementById('question-text');
+        const answerButtonsEl = document.getElementById('answer-buttons');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const explanationTextEl = document.getElementById('explanation-text');
+        const scoreTextEl = document.getElementById('score-text');
+
+        // Dados do Quiz
+        const questions = [
+            {
+                question: 'Qual conceito central Lawrence Stenhouse defendia em oposição ao "modelo de currículo por objetivos"?',
+                answers: [
+                    { text: 'Modelo por competências', correct: false },
+                    { text: 'Modelo de processo', correct: true },
+                    { text: 'Modelo de conteúdo', correct: false },
+                    { text: 'Modelo técnico-linear', correct: false }
+                ],
+                explanation: 'Stenhouse criticava o modelo por objetivos por ser rígido e propunha o "modelo de processo", que via o currículo como uma hipótese a ser testada e adaptada pelo professor.'
+            },
+            {
+                question: 'Segundo Stenhouse, o papel mais importante do professor na sala de aula é o de:',
+                answers: [
+                    { text: 'Transmissor de conhecimento', correct: false },
+                    { text: 'Avaliador rigoroso dos alunos', correct: false },
+                    { text: 'Pesquisador de sua própria prática', correct: true },
+                    { text: 'Planejador de aulas expositivas', correct: false }
+                ],
+                explanation: 'Para ele, o professor deveria ser um pesquisador ativo, estudando e refletindo sobre sua própria prática para aprimorar o ensino e o currículo.'
+            },
+            {
+                question: 'Qual famoso projeto, dirigido por Stenhouse, focava no ensino de temas controversos com o professor atuando como um mediador neutro?',
+                answers: [
+                    { text: 'Man: A Course of Study (MACOS)', correct: false },
+                    { text: 'Projeto de Currículo de Humanidades (HCP)', correct: true },
+                    { text: 'Currículo em Ação', correct: false },
+                    { text: 'Escola da Ponte', correct: false }
+                ],
+                explanation: 'O Humanities Curriculum Project (HCP) foi um marco, propondo que temas polêmicos fossem discutidos em sala com o professor garantindo um debate equilibrado, sem impor sua visão.'
+            },
+            {
+                question: 'A frase "Não há desenvolvimento de currículo sem o desenvolvimento do professor" reflete qual ideia fundamental de Stenhouse?',
+                answers: [
+                    { text: 'A necessidade de melhores salários para motivar', correct: false },
+                    { text: 'A importância da autonomia e pesquisa docente', correct: true },
+                    { text: 'A superioridade do conteúdo sobre o método', correct: false },
+                    { text: 'A centralidade do aluno no processo de aprendizagem', correct: false }
+                ],
+                explanation: 'Essa frase icônica resume sua crença de que qualquer mudança curricular só é efetiva se os professores se desenvolverem profissionalmente através da pesquisa e reflexão.'
+            },
+             {
+                question: 'Para Stenhouse, o currículo deve ser visto como:',
+                answers: [
+                    { text: 'Uma especificação de conteúdos a serem ensinados.', correct: false },
+                    { text: 'Uma lista de objetivos de aprendizagem a serem alcançados.', correct: false },
+                    { text: 'Uma hipótese a ser testada criticamente em sala de aula.', correct: true },
+                    { text: 'Um documento oficial que não pode ser alterado.', correct: false }
+                ],
+                explanation: 'Ele via o currículo não como uma receita pronta, mas como uma "especificação educacional hipotética", que ganha vida e é validada na prática pedagógica do professor.'
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // Funções do Jogo
+        function startGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            resetState();
+            const currentQuestion = questions[currentQuestionIndex];
+            questionCounterEl.innerText = `Pergunta ${currentQuestionIndex + 1} de ${questions.length}`;
+            questionTextEl.innerText = currentQuestion.question;
+
+            currentQuestion.answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.innerText = answer.text;
+                button.classList.add('btn');
+                if (answer.correct) {
+                    button.dataset.correct = answer.correct;
+                }
+                button.addEventListener('click', selectAnswer);
+                answerButtonsEl.appendChild(button);
+            });
+        }
+
+        function resetState() {
+            nextBtn.classList.add('hidden');
+            feedbackContainer.classList.add('hidden');
+            while (answerButtonsEl.firstChild) {
+                answerButtonsEl.removeChild(answerButtonsEl.firstChild);
+            }
+        }
+
+        function selectAnswer(e) {
+            const selectedBtn = e.target;
+            const isCorrect = selectedBtn.dataset.correct === 'true';
+
+            if (isCorrect) {
+                score++;
+            }
+
+            // Mostra o feedback visual
+            Array.from(answerButtonsEl.children).forEach(button => {
+                if (button.dataset.correct === 'true') {
+                    button.classList.add('correct');
+                } else {
+                    button.classList.add('incorrect');
+                }
+                button.disabled = true; // Desabilita todos os botões
+            });
+
+            // Mostra a explicação
+            explanationTextEl.innerText = questions[currentQuestionIndex].explanation;
+            feedbackContainer.classList.remove('hidden');
+
+            // Mostra o botão de próxima
+            if (questions.length > currentQuestionIndex + 1) {
+                nextBtn.innerText = "Próxima Pergunta";
+                nextBtn.classList.remove('hidden');
+            } else {
+                nextBtn.innerText = "Ver Resultado";
+                nextBtn.classList.remove('hidden');
+            }
+        }
+
+        function showNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showEndScreen();
+            }
+        }
+        
+        function showEndScreen() {
+            quizScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            scoreTextEl.innerText = `${score} / ${questions.length}`;
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', startGame);
+        nextBtn.addEventListener('click', showNextQuestion);
+        restartBtn.addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>

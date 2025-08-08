@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz: As Ideias de Lawrence Stenhouse</title>
+    <title>Quiz: As Ideias de Maria Montessori</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -56,15 +56,15 @@
     <div id="game-container" class="max-w-2xl w-full">
         <!-- Tela Inicial -->
         <div id="start-screen" class="card text-center">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Quiz: Lawrence Stenhouse</h1>
-            <p class="text-gray-600 mb-6">Teste seus conhecimentos sobre um dos mais influentes pensadores da educação e sua visão sobre o currículo e o papel do professor.</p>
-            <button id="start-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Começar o Jogo</button>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Quiz: Maria Montessori</h1>
+            <p class="text-gray-600 mb-6">Teste seus conhecimentos sobre o método Montessori e sua abordagem única para a educação infantil.</p>
+            <button id="start-btn" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors">Começar o Jogo</button>
         </div>
 
         <!-- Tela do Quiz -->
         <div id="quiz-screen" class="card hidden">
             <div id="question-container">
-                <p class="text-sm font-semibold text-blue-600 mb-2" id="question-counter"></p>
+                <p class="text-sm font-semibold text-teal-600 mb-2" id="question-counter"></p>
                 <h2 class="text-2xl font-bold text-gray-800 mb-6" id="question-text"></h2>
                 <div id="answer-buttons" class="grid grid-cols-1 gap-3">
                     <!-- Botões de resposta serão inseridos aqui -->
@@ -80,16 +80,17 @@
         <div id="end-screen" class="card text-center hidden">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Fim de Jogo!</h1>
             <p class="text-gray-600 mb-4">Sua pontuação final foi:</p>
-            <p class="text-5xl font-extrabold text-blue-600 mb-6" id="score-text"></p>
+            <p class="text-5xl font-extrabold text-teal-600 mb-6" id="score-text"></p>
             <div class="text-left bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-                <h3 class="font-bold text-lg mb-2">Resumo das Ideias de Stenhouse:</h3>
+                <h3 class="font-bold text-lg mb-2">Resumo das Ideias de Montessori:</h3>
                 <ul class="list-disc list-inside text-gray-700 space-y-1">
-                    <li><strong>Currículo como Processo:</strong> O currículo não é um produto final, mas uma hipótese a ser testada e aprimorada pelo professor em sala de aula.</li>
-                    <li><strong>Professor como Pesquisador:</strong> O professor deve investigar a própria prática para desenvolver o currículo e a si mesmo profissionalmente.</li>
-                    <li><strong>Desenvolvimento Profissional:</strong> "Não há desenvolvimento de currículo sem o desenvolvimento do professor."</li>
+                    <li><strong>Autoeducação:</strong> A criança é capaz de aprender por si mesma, guiada por seus interesses naturais.</li>
+                    <li><strong>Ambiente Preparado:</strong> A sala de aula deve ser organizada, acessível e equipada com materiais específicos para promover a autonomia.</li>
+                    <li><strong>Adulto Preparado:</strong> O professor atua como um guia, observando a criança e conectando-a com o ambiente, sem interferir desnecessariamente.</li>
+                    <li><strong>Períodos Sensíveis:</strong> Fases em que a criança tem uma sensibilidade especial para aprender determinadas habilidades.</li>
                 </ul>
             </div>
-            <button id="restart-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Jogar Novamente</button>
+            <button id="restart-btn" class="w-full bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors">Jogar Novamente</button>
         </div>
     </div>
 
@@ -113,54 +114,54 @@
         // Dados do Quiz
         const questions = [
             {
-                question: 'Qual conceito central Lawrence Stenhouse defendia em oposição ao "modelo de currículo por objetivos"?',
+                question: 'Qual é o princípio fundamental do método Montessori, que acredita na capacidade inata da criança de aprender?',
                 answers: [
-                    { text: 'Modelo por competências', correct: false },
-                    { text: 'Modelo de processo', correct: true },
-                    { text: 'Modelo de conteúdo', correct: false },
-                    { text: 'Modelo técnico-linear', correct: false }
+                    { text: 'Instrução direta', correct: false },
+                    { text: 'Aprendizagem cooperativa', correct: false },
+                    { text: 'Autoeducação', correct: true },
+                    { text: 'Memorização', correct: false }
                 ],
-                explanation: 'Stenhouse criticava o modelo por objetivos por ser rígido e propunha o "modelo de processo", que via o currículo como uma hipótese a ser testada e adaptada pelo professor.'
+                explanation: 'A autoeducação é central no método. Montessori acreditava que, em um ambiente adequado, a criança é a protagonista de seu próprio aprendizado.'
             },
             {
-                question: 'Segundo Stenhouse, o papel mais importante do professor na sala de aula é o de:',
+                question: 'No método Montessori, como é chamado o espaço cuidadosamente organizado para promover a independência da criança?',
                 answers: [
-                    { text: 'Transmissor de conhecimento', correct: false },
-                    { text: 'Avaliador rigoroso dos alunos', correct: false },
-                    { text: 'Pesquisador de sua própria prática', correct: true },
-                    { text: 'Planejador de aulas expositivas', correct: false }
+                    { text: 'Sala de jogos', correct: false },
+                    { text: 'Ambiente preparado', correct: true },
+                    { text: 'Laboratório de ciências', correct: false },
+                    { text: 'Canto da leitura', correct: false }
                 ],
-                explanation: 'Para ele, o professor deveria ser um pesquisador ativo, estudando e refletindo sobre sua própria prática para aprimorar o ensino e o currículo.'
+                explanation: 'O "ambiente preparado" é um espaço com móveis do tamanho da criança e materiais específicos organizados de forma acessível para que ela possa escolher suas atividades.'
             },
             {
-                question: 'Qual famoso projeto, dirigido por Stenhouse, focava no ensino de temas controversos com o professor atuando como um mediador neutro?',
+                question: 'Qual o papel do professor em uma sala de aula Montessori?',
                 answers: [
-                    { text: 'Man: A Course of Study (MACOS)', correct: false },
-                    { text: 'Projeto de Currículo de Humanidades (HCP)', correct: true },
-                    { text: 'Currículo em Ação', correct: false },
-                    { text: 'Escola da Ponte', correct: false }
+                    { text: 'Transmitir todo o conhecimento', correct: false },
+                    { text: 'Aplicar provas e testes constantemente', correct: false },
+                    { text: 'Atuar como um guia e observador', correct: true },
+                    { text: 'Manter a disciplina de forma rígida', correct: false }
                 ],
-                explanation: 'O Humanities Curriculum Project (HCP) foi um marco, propondo que temas polêmicos fossem discutidos em sala com o professor garantindo um debate equilibrado, sem impor sua visão.'
+                explanation: 'O professor montessoriano é um "guia" ou "diretor". Sua função é observar a criança, apresentar os materiais e interferir o mínimo possível no processo de descoberta dela.'
             },
             {
-                question: 'A frase "Não há desenvolvimento de currículo sem o desenvolvimento do professor" reflete qual ideia fundamental de Stenhouse?',
+                question: 'A "Torre Rosa" é um material Montessori clássico. Qual habilidade ela visa desenvolver principalmente?',
                 answers: [
-                    { text: 'A necessidade de melhores salários para motivar', correct: false },
-                    { text: 'A importância da autonomia e pesquisa docente', correct: true },
-                    { text: 'A superioridade do conteúdo sobre o método', correct: false },
-                    { text: 'A centralidade do aluno no processo de aprendizagem', correct: false }
+                    { text: 'Reconhecimento de cores', correct: false },
+                    { text: 'Habilidades de escrita', correct: false },
+                    { text: 'Discriminação visual de tamanho', correct: true },
+                    { text: 'Conceitos musicais', correct: false }
                 ],
-                explanation: 'Essa frase icônica resume sua crença de que qualquer mudança curricular só é efetiva se os professores se desenvolverem profissionalmente através da pesquisa e reflexão.'
+                explanation: 'A Torre Rosa consiste em 10 cubos de tamanhos diferentes que a criança empilha. O material desenvolve a percepção visual das dimensões e a coordenação motora.'
             },
              {
-                question: 'Para Stenhouse, o currículo deve ser visto como:',
+                question: 'O que são os "períodos sensíveis" na teoria de Montessori?',
                 answers: [
-                    { text: 'Uma especificação de conteúdos a serem ensinados.', correct: false },
-                    { text: 'Uma lista de objetivos de aprendizagem a serem alcançados.', correct: false },
-                    { text: 'Uma hipótese a ser testada criticamente em sala de aula.', correct: true },
-                    { text: 'Um documento oficial que não pode ser alterado.', correct: false }
+                    { text: 'Momentos em que a criança está mais sensível emocionalmente.', correct: false },
+                    { text: 'Fases transitórias de intenso interesse por aprender algo específico.', correct: true },
+                    { text: 'Os horários do dia em que a criança aprende melhor.', correct: false },
+                    { text: 'Períodos de avaliação do desenvolvimento infantil.', correct: false }
                 ],
-                explanation: 'Ele via o currículo não como uma receita pronta, mas como uma "especificação educacional hipotética", que ganha vida e é validada na prática pedagógica do professor.'
+                explanation: 'Os períodos sensíveis são "janelas de oportunidade" em que a criança demonstra um interesse e uma facilidade enormes para adquirir certas habilidades, como linguagem, movimento ou ordem.'
             }
         ];
 
