@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treinamento Montessori para Docentes</title>
+    <!-- Inclui o Tailwind CSS para um estilo moderno e responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Define a fonte Inter para o projeto -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para a transição suave de módulos */
+        .fade-in {
+            animation: fadeIn ease 0.5s;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-4xl w-full flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-8">
+        <!-- Barra de Navegação Lateral -->
+        <aside class="w-full lg:w-1/4">
+            <h1 class="text-3xl font-bold text-blue-800 mb-6">Montessori</h1>
+            <nav class="space-y-4">
+                <button onclick="showModule('intro')" class="w-full text-left p-4 rounded-xl transition-colors duration-300 bg-blue-100 text-blue-800 font-semibold hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    📚 Introdução
+                </button>
+                <button onclick="showModule('principios')" class="w-full text-left p-4 rounded-xl transition-colors duration-300 bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    💡 Princípios Fundamentais
+                </button>
+                <button onclick="showModule('ambiente')" class="w-full text-left p-4 rounded-xl transition-colors duration-300 bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    🏡 O Ambiente Preparado
+                </button>
+                <button onclick="showModule('materiais')" class="w-full text-left p-4 rounded-xl transition-colors duration-300 bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    🧩 Materiais Montessori
+                </button>
+                <button onclick="showModule('docente')" class="w-full text-left p-4 rounded-xl transition-colors duration-300 bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    👩‍🏫 O Papel do Docente
+                </button>
+                <button onclick="showModule('quiz')" class="w-full text-left p-4 rounded-xl transition-colors duration-300 bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    ✅ Quiz Final
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main id="content-area" class="w-full lg:w-3/4 bg-gray-50 p-6 rounded-2xl shadow-inner">
+            <!-- O conteúdo do módulo será injetado aqui pelo JavaScript -->
+        </main>
+    </div>
+
+    <script>
+        // Dados do conteúdo para cada módulo e quiz
+        const modules = {
+            intro: {
+                title: "Bem-vindo ao Treinamento Montessori",
+                content: `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Bem-vindo(a)!</h2>
+                    <p class="text-gray-700 mb-4">Este aplicativo interativo foi criado para lhe dar uma introdução clara e prática ao método Montessori. Explore os módulos na barra lateral para aprender sobre os princípios, o ambiente, os materiais e o seu papel como docente.</p>
+                    <p class="text-gray-700">A jornada Montessori é sobre guiar a criança em direção à independência e ao amor pela aprendizagem. Vamos começar!</p>
+                `
+            },
+            principios: {
+                title: "Princípios Fundamentais",
+                content: `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Princípios Fundamentais</h2>
+                    <p class="text-gray-700 mb-4">O método Montessori baseia-se em pilares sólidos que respeitam a natureza do desenvolvimento infantil. Os mais importantes incluem:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><strong>O Ambiente Preparado:</strong> Um espaço organizado, bonito e acessível que permite à criança agir e aprender de forma independente.</li>
+                        <li><strong>A Mente Absorvente:</strong> A capacidade única da criança, nos primeiros anos de vida, de absorver informações do ambiente sem esforço consciente.</li>
+                        <li><strong>Períodos Sensíveis:</strong> Janelas de oportunidade onde a criança tem uma predisposição natural para adquirir uma habilidade específica.</li>
+                        <li><strong>Educação para a Paz:</strong> O método não se foca apenas em habilidades acadêmicas, mas também em desenvolver a responsabilidade social e o respeito mútuo.</li>
+                    </ul>
+                `
+            },
+            ambiente: {
+                title: "O Ambiente Preparado",
+                content: `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">O Ambiente Preparado</h2>
+                    <p class="text-gray-700 mb-4">O ambiente de uma sala de aula Montessori é intencionalmente projetado para a criança. Cada detalhe tem um propósito educativo.</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><strong>Ordem e Organização:</strong> Tudo tem o seu lugar. A ordem física ajuda a criança a desenvolver a ordem mental.</li>
+                        <li><strong>Materiais Acessíveis:</strong> Os materiais de desenvolvimento são colocados em prateleiras baixas e abertas, convidando a criança a escolhê-los livremente.</li>
+                        <li><strong>Estética e Simplicidade:</strong> O ambiente é visualmente atraente e calmo, com cores suaves e elementos naturais.</li>
+                        <li><strong>Um Espaço para Cada Atividade:</strong> Existem áreas distintas para trabalho individual, em grupo, e movimento.</li>
+                    </ul>
+                `
+            },
+            materiais: {
+                title: "Materiais Montessori",
+                content: `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Materiais Montessori</h2>
+                    <p class="text-gray-700 mb-4">Os materiais Montessori não são brinquedos, mas ferramentas de desenvolvimento. Eles possuem características únicas:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><strong>Controlo de Erros:</strong> A maioria dos materiais é projetada para que a criança possa ver e corrigir os seus próprios erros, promovendo a autonomia.</li>
+                        <li><strong>Isolamento da Qualidade:</strong> Cada material foca numa única qualidade ou conceito, como cor, forma ou tamanho, para evitar distração.</li>
+                        <li><strong>Da Experiência Concreta à Abstrata:</strong> Os materiais guiam a criança de conceitos concretos e sensoriais para ideias abstratas.</li>
+                    </ul>
+                `
+            },
+            docente: {
+                title: "O Papel do Docente",
+                content: `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">O Papel do Docente (O Guia)</h2>
+                    <p class="text-gray-700 mb-4">Na sala de aula Montessori, o docente não é o centro da atenção. O seu papel é o de um <strong>"guia"</strong> ou <strong>"diretora"</strong>. As suas responsabilidades incluem:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><strong>Observação:</strong> Observar atentamente cada criança para entender as suas necessidades e interesses.</li>
+                        <li><strong>Preparação do Ambiente:</strong> Assegurar que o ambiente está sempre bem organizado e abastecido com materiais apropriados.</li>
+                        <li><strong>Apresentação de Materiais:</strong> Demonstrar o uso de um material de forma precisa e silenciosa, deixando que a criança o explore de seguida.</li>
+                        <li><strong>Confiança na Criança:</strong> Ter uma profunda fé na capacidade inata da criança de aprender e se desenvolver.</li>
+                    </ul>
+                `
+            },
+            quiz: {
+                title: "Quiz Final",
+                content: `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Quiz Final</h2>
+                    <div id="start-screen" class="card text-center">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-4">Cenário Interativo Montessori</h1>
+                        <div class="text-left bg-gray-100 p-4 rounded-lg mb-6 border border-gray-200">
+                            <p class="font-bold">Situação Geral:</p>
+                            <p class="text-gray-700">Você foi transferido para o Colégio Militar de Brasília e foi designado para a função de docente dos alunos do 5º ano do fundamental.</p>
+                        </div>
+                        <p class="text-left font-bold">Situação Particular:</p>
+                        <p class="text-gray-600 mb-6 text-left">Você está em sala de aula e deve aplicar os conceitos de Montessori, adaptados para esta faixa etária, respondendo às questões dos cenários a seguir. Boa sorte!</p>
+                        <button id="start-btn" class="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-colors">Começar</button>
+                    </div>
+                    <div id="quiz-questions" class="space-y-6"></div>
+                    <div id="quiz-result" class="mt-8 text-center text-xl font-semibold hidden"></div>
+                    <button onclick="submitQuiz()" class="mt-6 w-full py-3 px-6 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Submeter Respostas
+                    </button>
+                    <!-- Adicionado o histórico de tentativas -->
+                    <div id="quiz-history-container" class="mt-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Histórico de Tentativas</h3>
+                        <div id="quiz-history" class="space-y-2"></div>
+                    </div>
+                `,
+                questions: [
+                    {
+                        question: "Qual é o papel principal do docente no método Montessori?",
+                        options: [
+                            "Ditar o currículo diário para a turma.",
+                            "Manter a ordem e a disciplina de forma rígida.",
+                            "Ser um guia, observador e preparador do ambiente.",
+                            "Ser o centro das atenções, liderando todas as atividades."
+                        ],
+                        correctAnswer: 2 // Índice da resposta correta
+                    },
+                    {
+                        question: "O que significa 'Controlo de Erros' nos materiais Montessori?",
+                        options: [
+                            "O docente corrige imediatamente qualquer erro da criança.",
+                            "O material é projetado para que a criança perceba e corrija os seus próprios erros.",
+                            "O material é impossível de usar de forma incorreta.",
+                            "É uma funcionalidade que apenas os materiais digitais possuem."
+                        ],
+                        correctAnswer: 1
+                    },
+                    {
+                        question: "A 'Mente Absorvente' é uma característica que se aplica a que faixa etária?",
+                        options: [
+                            "Apenas adultos que estão a aprender um novo idioma.",
+                            "Crianças na adolescência.",
+                            "Crianças dos 0 aos 6 anos, aproximadamente.",
+                            "Estudantes universitários."
+                        ],
+                        correctAnswer: 2
+                    }
+                ],
+                // Novo array para armazenar o histórico de tentativas
+                quizHistory: []
+            }
+        };
+
+        // Referência à área de conteúdo
+        const contentArea = document.getElementById('content-area');
+        const navButtons = document.querySelectorAll('nav button');
+        let currentModule = 'intro';
+
+        // Função para mostrar um módulo específico
+        function showModule(moduleId) {
+            // Remove o botão ativo atual
+            navButtons.forEach(btn => btn.classList.remove('bg-blue-100', 'text-blue-800'));
+            navButtons.forEach(btn => btn.classList.add('bg-gray-200', 'text-gray-700'));
+
+            // Adiciona o estilo 'ativo' ao botão clicado
+            document.querySelector(`[onclick="showModule('${moduleId}')"]`).classList.add('bg-blue-100', 'text-blue-800');
+            document.querySelector(`[onclick="showModule('${moduleId}')"]`).classList.remove('bg-gray-200', 'text-gray-700');
+
+            currentModule = moduleId;
+            contentArea.innerHTML = ''; // Limpa o conteúdo anterior
+            contentArea.classList.remove('fade-in'); // Reinicia a animação de fade
+            contentArea.classList.add('fade-in');
+
+            const moduleData = modules[moduleId];
+            if (moduleData) {
+                // Adiciona o conteúdo do módulo
+                contentArea.innerHTML = moduleData.content;
+
+                // Se o módulo for o quiz, renderiza as questões e o histórico
+                if (moduleId === 'quiz') {
+                    renderQuizQuestions(moduleData.questions);
+                    renderQuizHistory(moduleData.quizHistory);
+                }
+            }
+        }
+
+        // Função para renderizar as questões do quiz
+        function renderQuizQuestions(questions) {
+            const quizContainer = document.getElementById('quiz-questions');
+            quizContainer.innerHTML = ''; // Limpa questões anteriores
+
+            questions.forEach((q, index) => {
+                const questionElement = document.createElement('div');
+                questionElement.className = 'bg-white p-6 rounded-2xl shadow-md';
+                questionElement.innerHTML = `
+                    <p class="font-bold text-lg text-gray-800 mb-4">${index + 1}. ${q.question}</p>
+                    <div class="space-y-3">
+                        ${q.options.map((option, optIndex) => `
+                            <label class="flex items-center space-x-3 text-gray-700 cursor-pointer">
+                                <input type="radio" name="question-${index}" value="${optIndex}" class="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500">
+                                <span>${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                quizContainer.appendChild(questionElement);
+            });
+        }
+
+        // Nova função para renderizar o histórico do quiz
+        function renderQuizHistory(history) {
+            const historyContainer = document.getElementById('quiz-history');
+            historyContainer.innerHTML = ''; // Limpa o histórico anterior
+
+            if (history.length === 0) {
+                historyContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhuma tentativa registrada ainda.</p>';
+                return;
+            }
+
+            history.forEach((attempt, index) => {
+                const attemptElement = document.createElement('div');
+                attemptElement.className = 'p-4 bg-gray-100 rounded-xl flex justify-between items-center shadow-sm';
+                attemptElement.innerHTML = `
+                    <span class="font-medium">Tentativa #${index + 1}</span>
+                    <span class="text-gray-600">Pontuação: ${attempt.score}/${attempt.totalQuestions} em ${attempt.date}</span>
+                `;
+                historyContainer.appendChild(attemptElement);
+            });
+        }
+
+        // Função para submeter o quiz e mostrar os resultados
+        function submitQuiz() {
+            const resultDiv = document.getElementById('quiz-result');
+            let score = 0;
+            const questions = modules.quiz.questions;
+            let allAnswered = true;
+
+            questions.forEach((q, index) => {
+                const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+                if (selectedOption) {
+                    if (parseInt(selectedOption.value) === q.correctAnswer) {
+                        score++;
+                    }
+                } else {
+                    allAnswered = false;
+                }
+            });
+
+            if (!allAnswered) {
+                resultDiv.innerHTML = '<span class="text-red-500">Por favor, responda a todas as perguntas!</span>';
+                resultDiv.classList.remove('hidden');
+                return;
+            }
+
+            const totalQuestions = questions.length;
+            let resultText = '';
+            if (score === totalQuestions) {
+                resultText = '🎉 Excelente! Você acertou todas as perguntas. Parabéns!';
+                resultDiv.classList.add('text-green-600');
+                resultDiv.classList.remove('text-yellow-600', 'text-red-600');
+            } else if (score > totalQuestions / 2) {
+                resultText = `✅ Bom trabalho! Você acertou ${score} de ${totalQuestions} perguntas. Continue a aprender!`;
+                resultDiv.classList.add('text-yellow-600');
+                resultDiv.classList.remove('text-green-600', 'text-red-600');
+            } else {
+                resultText = `😕 Você acertou ${score} de ${totalQuestions} perguntas. Revise os materiais e tente novamente.`;
+                resultDiv.classList.add('text-red-600');
+                resultDiv.classList.remove('text-green-600', 'text-yellow-600');
+            }
+
+            resultDiv.innerHTML = resultText;
+            resultDiv.classList.remove('hidden');
+
+            // Adiciona o resultado ao histórico
+            modules.quiz.quizHistory.push({
+                score: score,
+                totalQuestions: totalQuestions,
+                date: new Date().toLocaleString('pt-BR')
+            });
+
+            // Renderiza o histórico atualizado
+            renderQuizHistory(modules.quiz.quizHistory);
+        }
+
+        // Carrega o módulo de introdução ao carregar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            showModule('intro');
+        });
+
+    </script>
+</body>
+</html>
