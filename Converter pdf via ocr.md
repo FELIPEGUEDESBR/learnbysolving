@@ -14,6 +14,14 @@ wsl --install -d kali-linux
 sudo apt update
 sudo apt install unpaper ocrmypdf tesseract-ocr tesseract-ocr-por tesseract-ocr-eng
 ~~~~~~
+#### Configurando o bash
+~~~~~
+nano ~/.bashrc
+bind "set completion-ignore-case on"
+bind "TAB:menu-complete"
+source ~/.bashrc
+~~~~~
+
 #### converter_pdf.py
 python converter_pdf.py dominio.pdf saida.pdf
 ~~~~~
