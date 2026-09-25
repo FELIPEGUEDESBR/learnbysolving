@@ -1,22 +1,8 @@
 # ============================================================
-# STREAM DE MICROFONE - POWERSHELL + .NET
-#
-# Captura:
-#   16 kHz
-#   16 bits
-#   Mono
-#
-# Envia:
-#   TCP
-#
-# Destino:
-#   servidor Whisper
+# STREAM DE MICROFONE
+# PowerShell + .NET + winmm.dll
+# Sem NAudio / FFmpeg
 # ============================================================
-
-
-# ------------------------------------------------------------
-# CONFIGURAÇÃO
-# ------------------------------------------------------------
 
 $Servidor = "192.168.0.12"
 $Porta = 5000
@@ -26,22 +12,18 @@ $Bits = 16
 $Channels = 1
 
 
-# ------------------------------------------------------------
-# CÓDIGO .NET PARA CAPTURA DO MICROFONE
-# ------------------------------------------------------------
+# ============================================================
+# CAPTURA DO MICROFONE
+# ============================================================
 
 Add-Type @"
-
 using System;
 using System.Runtime.InteropServices;
 
 public class MicrophoneCapture
 {
     private const int CALLBACK_FUNCTION = 0x00030000;
-    private const int WIM_OPEN = 0x3BE;
     private const int WIM_DATA = 0x3C0;
-    private const int WIM_CLOSE = 0x3BF;
-
     private const int WAVE_FORMAT_PCM = 1;
 
     [StructLayout(LayoutKind.Sequential)]
@@ -152,18 +134,19 @@ public class MicrophoneCapture
 
         format.wFormatTag = WAVE_FORMAT_PCM;
 
-        format.nChannels = channels;
+        // CORREÇÃO: cast explícito para ushort
+        format.nChannels = (ushort)channels;
 
         format.nSamplesPerSec = (uint)sampleRate;
 
-        format.wBitsPerSample = bits;
+        // CORREÇÃO: cast explícito para ushort
+        format.wBitsPerSample = (ushort)bits;
 
         format.nBlockAlign =
             (ushort)(channels * bits / 8);
 
         format.nAvgBytesPerSec =
-            (uint)(sampleRate *
-                   format.nBlockAlign);
+            (uint)(sampleRate * format.nBlockAlign);
 
         format.cbSize = 0;
 
@@ -184,7 +167,7 @@ public class MicrophoneCapture
         if (result != 0)
         {
             throw new Exception(
-                "Não foi possível abrir o microfone. Código: "
+                "Erro ao abrir o microfone. Código: "
                 + result
             );
         }
@@ -198,27 +181,22 @@ public class MicrophoneCapture
             bits / 8 / 2;
 
 
-        headers =
-            new IntPtr[bufferCount];
+        headers = new IntPtr[bufferCount];
 
-        buffers =
-            new IntPtr[bufferCount];
+        buffers = new IntPtr[bufferCount];
 
 
         for (int i = 0; i < bufferCount; i++)
         {
 
             buffers[i] =
-                Marshal.AllocHGlobal(
-                    bufferSize
-                );
+                Marshal.AllocHGlobal(bufferSize);
 
 
             WAVEHDR header =
                 new WAVEHDR();
 
-            header.lpData =
-                buffers[i];
+            header.lpData = buffers[i];
 
             header.dwBufferLength =
                 (uint)bufferSize;
@@ -226,7 +204,7 @@ public class MicrophoneCapture
 
             headers[i] =
                 Marshal.AllocHGlobal(
-                    Marshal.SizeOf<WAVEHDR>()
+                    Marshal.SizeOf(typeof(WAVEHDR))
                 );
 
 
@@ -240,19 +218,27 @@ public class MicrophoneCapture
             waveInPrepareHeader(
                 hWaveIn,
                 headers[i],
-                Marshal.SizeOf<WAVEHDR>()
+                Marshal.SizeOf(typeof(WAVEHDR))
             );
 
 
             waveInAddBuffer(
                 hWaveIn,
                 headers[i],
-                Marshal.SizeOf<WAVEHDR>()
+                Marshal.SizeOf(typeof(WAVEHDR))
             );
         }
 
 
-        waveInStart(hWaveIn);
+        result = waveInStart(hWaveIn);
+
+        if (result != 0)
+        {
+            throw new Exception(
+                "Erro ao iniciar captura. Código: "
+                + result
+            );
+        }
     }
 
 
@@ -270,8 +256,9 @@ public class MicrophoneCapture
 
 
         WAVEHDR header =
-            Marshal.PtrToStructure<WAVEHDR>(
-                param1
+            (WAVEHDR)Marshal.PtrToStructure(
+                param1,
+                typeof(WAVEHDR)
             );
 
 
@@ -280,7 +267,7 @@ public class MicrophoneCapture
 
             byte[] audio =
                 new byte[
-                    header.dwBytesRecorded
+                    (int)header.dwBytesRecorded
                 ];
 
 
@@ -292,14 +279,20 @@ public class MicrophoneCapture
             );
 
 
-            DataAvailable?.Invoke(audio);
+            // Compatível com compiladores C# antigos
+            Action<byte[]> handler = DataAvailable;
+
+            if (handler != null)
+            {
+                handler(audio);
+            }
         }
 
 
         waveInAddBuffer(
             hWaveIn,
             param1,
-            Marshal.SizeOf<WAVEHDR>()
+            Marshal.SizeOf(typeof(WAVEHDR))
         );
     }
 
@@ -316,28 +309,31 @@ public class MicrophoneCapture
         waveInReset(hWaveIn);
 
 
-        for (
-            int i = 0;
-            i < headers.Length;
-            i++
-        )
+        if (headers != null)
         {
+            for (
+                int i = 0;
+                i < headers.Length;
+                i++
+            )
+            {
 
-            waveInUnprepareHeader(
-                hWaveIn,
-                headers[i],
-                Marshal.SizeOf<WAVEHDR>()
-            );
+                waveInUnprepareHeader(
+                    hWaveIn,
+                    headers[i],
+                    Marshal.SizeOf(typeof(WAVEHDR))
+                );
 
 
-            Marshal.FreeHGlobal(
-                headers[i]
-            );
+                Marshal.FreeHGlobal(
+                    headers[i]
+                );
 
 
-            Marshal.FreeHGlobal(
-                buffers[i]
-            );
+                Marshal.FreeHGlobal(
+                    buffers[i]
+                );
+            }
         }
 
 
@@ -350,21 +346,51 @@ public class MicrophoneCapture
 "@
 
 
-# ------------------------------------------------------------
-# CONECTAR AO SERVIDOR
-# ------------------------------------------------------------
+# ============================================================
+# VERIFICAR SE A CLASSE FOI COMPILADA
+# ============================================================
+
+if (-not ("MicrophoneCapture" -as [type]))
+{
+    Write-Host ""
+    Write-Host "ERRO: não foi possível carregar MicrophoneCapture."
+    Write-Host "A captura não pode continuar."
+    exit 1
+}
+
+
+# ============================================================
+# CONEXÃO TCP
+# ============================================================
 
 Write-Host ""
-Write-Host "Conectando ao servidor..."
+Write-Host "=========================================="
+Write-Host " STREAM DE MICROFONE"
+Write-Host "=========================================="
+Write-Host ""
+
 Write-Host "Servidor: $Servidor"
-Write-Host "Porta: $Porta"
+Write-Host "Porta:    $Porta"
+Write-Host ""
+
+Write-Host "Conectando..."
 
 $tcp = New-Object System.Net.Sockets.TcpClient
 
-$tcp.Connect(
-    $Servidor,
-    $Porta
-)
+try
+{
+    $tcp.Connect(
+        $Servidor,
+        $Porta
+    )
+}
+catch
+{
+    Write-Host ""
+    Write-Host "ERRO: não foi possível conectar ao servidor."
+    Write-Host $_
+    exit 1
+}
 
 $stream = $tcp.GetStream()
 
@@ -372,17 +398,17 @@ Write-Host "Conectado!"
 Write-Host ""
 
 
-# ------------------------------------------------------------
+# ============================================================
 # CRIAR CAPTURA
-# ------------------------------------------------------------
+# ============================================================
 
 $microfone =
     New-Object MicrophoneCapture
 
 
-# ------------------------------------------------------------
+# ============================================================
 # ENVIAR ÁUDIO
-# ------------------------------------------------------------
+# ============================================================
 
 $microfone.Add_DataAvailable({
 
@@ -390,61 +416,100 @@ $microfone.Add_DataAvailable({
 
     try
     {
-        $stream.Write(
-            $audio,
-            0,
-            $audio.Length
-        )
-
-        $stream.Flush()
+        if ($stream -ne $null)
+        {
+            $stream.Write(
+                $audio,
+                0,
+                $audio.Length
+            )
+        }
     }
     catch
     {
-        Write-Host "Erro ao enviar áudio:"
+        Write-Host ""
+        Write-Host "Erro enviando áudio:"
         Write-Host $_
     }
 
 })
 
 
-# ------------------------------------------------------------
+# ============================================================
 # INICIAR MICROFONE
-# ------------------------------------------------------------
+# ============================================================
 
 Write-Host "Iniciando microfone..."
+
+try
+{
+    $microfone.Start(
+        $SampleRate,
+        $Channels,
+        $Bits
+    )
+}
+catch
+{
+    Write-Host ""
+    Write-Host "ERRO ao iniciar microfone:"
+    Write-Host $_
+
+    $stream.Close()
+    $tcp.Close()
+
+    exit 1
+}
+
+
 Write-Host ""
-
-$microfone.Start(
-    $SampleRate,
-    $Channels,
-    $Bits
-)
-
-
 Write-Host "=========================================="
 Write-Host " MICROFONE TRANSMITINDO"
 Write-Host "=========================================="
 Write-Host ""
-Write-Host "Formato: $SampleRate Hz / $Bits bits / Mono"
-Write-Host "Destino: $Servidor`:$Porta"
+Write-Host "Formato : $SampleRate Hz / $Bits bits / Mono"
+Write-Host "Destino : $Servidor`:$Porta"
 Write-Host ""
 Write-Host "Pressione ENTER para parar."
 Write-Host ""
 
 
+# ============================================================
+# AGUARDAR
+# ============================================================
+
 [void][Console]::ReadLine()
 
 
-# ------------------------------------------------------------
+# ============================================================
 # FINALIZAR
-# ------------------------------------------------------------
+# ============================================================
 
-Write-Host "Parando..."
+Write-Host ""
+Write-Host "Encerrando..."
 
-$microfone.Stop()
+try
+{
+    $microfone.Stop()
+}
+catch
+{
+}
 
-$stream.Close()
+try
+{
+    $stream.Close()
+}
+catch
+{
+}
 
-$tcp.Close()
+try
+{
+    $tcp.Close()
+}
+catch
+{
+}
 
 Write-Host "Transmissão encerrada."
