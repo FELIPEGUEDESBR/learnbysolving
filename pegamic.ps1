@@ -4,7 +4,7 @@
 # ==========================================
 
 $Servidor = "192.168.0.12"
-$Porta = 5000
+$Porta = 443
 
 Write-Host "=========================================="
 Write-Host " STREAM DE MICROFONE -> WHISPER"
