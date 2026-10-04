@@ -8,7 +8,7 @@ $isElevated = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]
 
 if (-not $isElevated) {
     Write-Warning "[!] Script nao executado como Administrador."
-    Write-Warning "    A leitura de logs 'Security' e chaves protegidas de 'HKLM' pode ser parcial."
+    Write-Warning "    A leitura de logs 'Security' e 'Sysmon' pode ser parcial ou falhar."
     Write-Warning "    Recomenda-se executar em terminal elevado para auditoria completa."
     Write-Host ""
 }
@@ -45,6 +45,7 @@ function Get-SeverityRank([string]$Severity) {
 
 $OutputPath = "$([Environment]::GetFolderPath('Desktop'))\Dashboard_Seguranca_Unificado.html"
 
+# Heurísticas Globais
 $SuspiciousPathPatterns = @(
     '\\AppData\\',
     '\\Temp\\',
@@ -81,7 +82,12 @@ $SuspiciousArguments = @(
     'https://'
 )
 
-Write-Host "[1/4] Coletando e analisando Logs de Eventos..." -ForegroundColor Cyan
+$SuspiciousPorts = @(4444, 5555, 1337, 31337, 8888, 9999, 6667, 7777, 8081, 9001, 1080)
+
+# ==============================================================================
+# 1. MÓDULO: AUDITORIA DE EVENT LOGS DO WINDOWS
+# ==============================================================================
+Write-Host "[1/5] Coletando e analisando Logs de Eventos do Windows..." -ForegroundColor Cyan
 
 $startDate = (Get-Date).AddMonths(-3)
 $endDate   = Get-Date
@@ -99,17 +105,16 @@ $eventRules = @(
     @{ ID = 1102; Log = "Security"; Name = "Log de auditoria apagado"; Category = "Defesa"; Severity = "Critical"; Enabled = $true; Description = "O log de seguranca foi limpo." },
     @{ ID = 7045; Log = "System"; Name = "Novo servico instalado"; Category = "Persistencia"; Severity = "High"; Enabled = $true; Description = "Novo servico registrado." },
     @{ ID = 1116; Log = "Microsoft-Windows-Windows Defender/Operational"; Name = "Malware detectado"; Category = "Defender"; Severity = "Critical"; Enabled = $true; Description = "Deteccao de ameaca pelo Defender." },
-    @{ ID = 5001; Log = "Microsoft-Windows-Windows Defender/Operational"; Name = "Protecao tempo real desabilitada"; Category = "Defesa"; Severity = "High"; Enabled = $true; Description = "Protecao em tempo real desligada." },
+    @{ ID = 5000; Log = "Microsoft-Windows-Windows Defender/Operational"; Name = "Defender habilitado"; Category = "Defender"; Severity = "Info"; Enabled = $true; Description = "Protecao do Windows Defender ativada." },
+    @{ ID = 5001; Log = "Microsoft-Windows-Windows Defender/Operational"; Name = "Defender desabilitado"; Category = "Defesa"; Severity = "Critical"; Enabled = $true; Description = "Protecao em tempo real do Defender desligada." },
+    @{ ID = 400;  Log = "Windows PowerShell"; Name = "Engine State Change"; Category = "PowerShell"; Severity = "Info"; Enabled = $true; Description = "Ciclo de vida/inicializacao do motor PowerShell." },
     @{ ID = 4104; Log = "Microsoft-Windows-PowerShell/Operational"; Name = "Script Block Logging"; Category = "PowerShell"; Severity = "Medium"; Enabled = $true; Description = "Bloco de script PowerShell registrado." }
 )
 
 $eventAlerts = [System.Collections.Generic.List[PSCustomObject]]::new()
 $ruleStatistics = @{}
 $eventRules | ForEach-Object {
-    $ruleStatistics[$_.ID] = @{
-        Name  = $_.Name;
-        Count = 0;
-    }
+    $ruleStatistics[$_.ID] = @{ Name = $_.Name; Count = 0; }
 }
 
 $eventRules | ForEach-Object {
@@ -131,37 +136,19 @@ $eventRules | ForEach-Object {
 
                 $sample | ForEach-Object {
                     $evt = $_
-                    $user = $null
-                    $ip   = $null
+                    $user = $null; $ip = $null
 
                     switch ($rule.ID) {
-                        4624 {
-                            $user = Get-EventDataValue -Event $evt -Name "TargetUserName"
-                            $ip   = Get-EventDataValue -Event $evt -Name "IpAddress"
-                        }
-                        4625 {
-                            $user = Get-EventDataValue -Event $evt -Name "TargetUserName"
-                            $ip   = Get-EventDataValue -Event $evt -Name "IpAddress"
-                        }
-                        4648 {
-                            $user = Get-EventDataValue -Event $evt -Name "TargetUserName"
-                        }
-                        4720 {
-                            $user = Get-EventDataValue -Event $evt -Name "TargetUserName"
-                        }
-                        4732 {
-                            $user = Get-EventDataValue -Event $evt -Name "MemberName"
-                        }
-                        4740 {
-                            $user = Get-EventDataValue -Event $evt -Name "TargetUserName"
-                            $ip   = Get-EventDataValue -Event $evt -Name "CallerComputerName"
-                        }
-                        7045 {
-                            $user = Get-EventDataValue -Event $evt -Name "AccountName"
-                        }
+                        4624 { $user = Get-EventDataValue -Event $evt -Name "TargetUserName"; $ip = Get-EventDataValue -Event $evt -Name "IpAddress" }
+                        4625 { $user = Get-EventDataValue -Event $evt -Name "TargetUserName"; $ip = Get-EventDataValue -Event $evt -Name "IpAddress" }
+                        4648 { $user = Get-EventDataValue -Event $evt -Name "TargetUserName" }
+                        4720 { $user = Get-EventDataValue -Event $evt -Name "TargetUserName" }
+                        4732 { $user = Get-EventDataValue -Event $evt -Name "MemberName" }
+                        4740 { $user = Get-EventDataValue -Event $evt -Name "TargetUserName"; $ip = Get-EventDataValue -Event $evt -Name "CallerComputerName" }
+                        7045 { $user = Get-EventDataValue -Event $evt -Name "AccountName" }
                     }
 
-                    if ($rule.ID -in @(4720, 4732, 1102, 7045, 1116, 5001)) {
+                    if ($rule.ID -in @(4720, 4732, 1102, 7045, 1116, 5000, 5001, 400)) {
                         $eventAlerts.Add([PSCustomObject]@{
                             EventId     = $rule.ID;
                             Rule        = $rule.Name;
@@ -182,21 +169,16 @@ $eventRules | ForEach-Object {
     }
 }
 
-# Deteccao de Forca Bruta (4625)
+# Força Bruta (4625)
 try {
     $failedLogons = @(Get-WinEvent -FilterHashtable @{ 
-        LogName   = "Security";
-        Id        = 4625;
-        StartTime = $startDate;
-        EndTime   = $endDate;
+        LogName = "Security"; Id = 4625; StartTime = $startDate; EndTime = $endDate 
     } -ErrorAction SilentlyContinue)
 
     $failedLogonObjects = $failedLogons | ForEach-Object {
         $u = Get-EventDataValue -Event $_ -Name "TargetUserName"
         $i = Get-EventDataValue -Event $_ -Name "IpAddress"
-        if ([string]::IsNullOrWhiteSpace($i) -or $i -in @("-", "::1", "127.0.0.1")) { 
-            $i = "LOCAL" 
-        }
+        if ([string]::IsNullOrWhiteSpace($i) -or $i -in @("-", "::1", "127.0.0.1")) { $i = "LOCAL" }
         [PSCustomObject]@{
             TimeCreated = $_.TimeCreated;
             User        = $u;
@@ -241,10 +223,7 @@ catch {}
 # Contas Bloqueadas (4740)
 try {
     $lockedEvents = @(Get-WinEvent -FilterHashtable @{ 
-        LogName   = "Security";
-        Id        = 4740;
-        StartTime = $startDate;
-        EndTime   = $endDate;
+        LogName = "Security"; Id = 4740; StartTime = $startDate; EndTime = $endDate 
     } -ErrorAction SilentlyContinue | Select-Object -First $maxEventsPerRule)
 
     $lockedEvents | ForEach-Object {
@@ -267,10 +246,7 @@ catch {}
 # PowerShell Script Block (4104)
 try {
     $psEvents = @(Get-WinEvent -FilterHashtable @{ 
-        LogName   = "Microsoft-Windows-PowerShell/Operational";
-        Id        = 4104;
-        StartTime = $startDate;
-        EndTime   = $endDate;
+        LogName = "Microsoft-Windows-PowerShell/Operational"; Id = 4104; StartTime = $startDate; EndTime = $endDate 
     } -ErrorAction SilentlyContinue)
 
     $psPatterns = @(
@@ -314,10 +290,7 @@ $infoCount = @($eventAlerts | Where-Object { $_.Severity -eq "Info" }).Count
 
 $eventChartData = @(
     $ruleStatistics.GetEnumerator() | ForEach-Object {
-        [PSCustomObject]@{
-            Label = "$($_.Key) - $($_.Value.Name)";
-            Count = $_.Value.Count;
-        }
+        [PSCustomObject]@{ Label = "$($_.Key) - $($_.Value.Name)"; Count = $_.Value.Count; }
     } | Where-Object { $_.Count -gt 0 } | Sort-Object Count -Descending
 )
 $eventChartJson = if ($eventChartData.Count -gt 0) { $eventChartData | ConvertTo-Json -Compress } else { "[]" }
@@ -331,7 +304,144 @@ $severityChartData = @(
 ) | Where-Object { $_.Count -gt 0 }
 $severityChartJson = if ($severityChartData.Count -gt 0) { $severityChartData | ConvertTo-Json -Compress } else { "[]" }
 
-Write-Host "[2/4] Coletando e analisando Tarefas Agendadas..." -ForegroundColor Cyan
+# ==============================================================================
+# 2. MÓDULO: TELEMETRIA SYSMON (IDs 1, 3, 11, 12, 13, 22)
+# ==============================================================================
+Write-Host "[2/5] Coletando e analisando telemetria Sysmon..." -ForegroundColor Cyan
+
+$sysmonReport = [System.Collections.Generic.List[PSCustomObject]]::new()
+$sysmonIds = @(1, 3, 11, 12, 13, 22)
+
+try {
+    $rawSysmonEvents = @(Get-WinEvent -FilterHashtable @{
+        LogName   = "Microsoft-Windows-Sysmon/Operational";
+        Id        = $sysmonIds;
+        StartTime = $startDate;
+        EndTime   = $endDate;
+    } -ErrorAction SilentlyContinue | Sort-Object TimeCreated -Descending | Select-Object -First 300)
+
+    $rawSysmonEvents | ForEach-Object {
+        $sEvt = $_
+        $id = $sEvt.Id
+        $isSusp = $false
+        $reasons = [System.Collections.Generic.List[string]]::new()
+        
+        $eventType   = "Sysmon ID $id"
+        $processName = "-"
+        $details     = "-"
+        $extraInfo   = "-"
+
+        switch ($id) {
+            1 {
+                $eventType   = "Process Creation"
+                $processName = Get-EventDataValue -Event $sEvt -Name "Image"
+                $cmdLine     = Get-EventDataValue -Event $sEvt -Name "CommandLine"
+                $parentImg   = Get-EventDataValue -Event $sEvt -Name "ParentImage"
+                $details     = $cmdLine
+                $extraInfo   = "Parent: $parentImg"
+
+                $SuspiciousPathPatterns | ForEach-Object {
+                    if ($processName -match $_) { $isSusp = $true; $reasons.Add("Executavel em pasta gravavel ($_)") }
+                }
+                $SuspiciousBinaries | ForEach-Object {
+                    if ($processName -match "(?i)$_") { $isSusp = $true; $reasons.Add("Binario LotL ($_)") }
+                }
+                $SuspiciousArguments | ForEach-Object {
+                    if ($cmdLine -match "(?i)$_") { $isSusp = $true; $reasons.Add("Argumento evasivo ($_)") }
+                }
+            }
+            3 {
+                $eventType   = "Network Connection"
+                $processName = Get-EventDataValue -Event $sEvt -Name "Image"
+                $destIp      = Get-EventDataValue -Event $sEvt -Name "DestinationIp"
+                $destPort    = Get-EventDataValue -Event $sEvt -Name "DestinationPort"
+                $protocol    = Get-EventDataValue -Event $sEvt -Name "Protocol"
+                $details     = "$protocol -> " + $destIp + ":" + $destPort
+                $extraInfo   = "Processo: $processName"
+
+                if ($SuspiciousPorts -contains [int]$destPort) {
+                    $isSusp = $true; $reasons.Add("Conexao para porta de alto risco ($destPort)")
+                }
+                $SuspiciousBinaries | ForEach-Object {
+                    if ($processName -match "(?i)$_") { $isSusp = $true; $reasons.Add("Binario LotL gerando rede ($_)") }
+                }
+                $SuspiciousPathPatterns | ForEach-Object {
+                    if ($processName -match $_) { $isSusp = $true; $reasons.Add("Binario de pasta de usuario em rede") }
+                }
+            }
+            11 {
+                $eventType   = "File Create"
+                $processName = Get-EventDataValue -Event $sEvt -Name "Image"
+                $targetFile  = Get-EventDataValue -Event $sEvt -Name "TargetFilename"
+                $details     = "Arquivo: $targetFile"
+                $extraInfo   = "Criado por: $processName"
+
+                if ($targetFile -match '\.(exe|dll|vbs|ps1|bat|cmd|hta|js)$') {
+                    $SuspiciousPathPatterns | ForEach-Object {
+                        if ($targetFile -match $_) {
+                            $isSusp = $true; $reasons.Add("Criacao de arquivo executavel em pasta gravavel")
+                        }
+                    }
+                }
+            }
+            12 {
+                $eventType   = "Registry Create/Delete"
+                $processName = Get-EventDataValue -Event $sEvt -Name "Image"
+                $targetObj   = Get-EventDataValue -Event $sEvt -Name "TargetObject"
+                $details     = "Alvo: $targetObj"
+                $extraInfo   = "Processo: $processName"
+
+                if ($targetObj -match '(?i)Run|RunOnce|Winlogon|Image File Execution Options|AppInit_DLLs') {
+                    $isSusp = $true; $reasons.Add("Interacao com chave critica de persistencia")
+                }
+            }
+            13 {
+                $eventType   = "Registry Value Set"
+                $processName = Get-EventDataValue -Event $sEvt -Name "Image"
+                $targetObj   = Get-EventDataValue -Event $sEvt -Name "TargetObject"
+                $detailsVal  = Get-EventDataValue -Event $sEvt -Name "Details"
+                $details     = "$targetObj = $detailsVal"
+                $extraInfo   = "Processo: $processName"
+
+                if ($targetObj -match '(?i)Run|RunOnce|Winlogon|Image File Execution Options|AppInit_DLLs') {
+                    $isSusp = $true; $reasons.Add("Modificacao de chave critica de persistencia")
+                }
+            }
+            22 {
+                $eventType   = "DNS Query"
+                $processName = Get-EventDataValue -Event $sEvt -Name "Image"
+                $queryName   = Get-EventDataValue -Event $sEvt -Name "QueryName"
+                $details     = "Query: $queryName"
+                $extraInfo   = "Processo: $processName"
+
+                if ($queryName -match '(?i)\.(xyz|top|tk|ru|pw|to)$|ngrok|duckdns|portmap') {
+                    $isSusp = $true; $reasons.Add("Consulta a dominio dinâmico ou TLD suspeito")
+                }
+                $SuspiciousBinaries | ForEach-Object {
+                    if ($processName -match "(?i)$_") { $isSusp = $true; $reasons.Add("Lookup DNS iniciado por shell/LotL ($_)") }
+                }
+            }
+        }
+
+        $sysmonReport.Add([PSCustomObject]@{
+            EventId      = $id;
+            TimeCreated  = $sEvt.TimeCreated;
+            EventType    = $eventType;
+            ProcessName  = $processName;
+            Details      = $details;
+            ExtraInfo    = $extraInfo;
+            IsSuspicious = $isSusp;
+            RiskReason   = if ($reasons.Count -gt 0) { $reasons -join " | " } else { "Normal" };
+        })
+    }
+} catch {
+    Write-Warning "[!] Falha ao consultar canal do Sysmon. Verifique se o Sysmon esta instalado."
+}
+
+# ==============================================================================
+# 3. MÓDULO: TAREFAS AGENDADAS
+# ==============================================================================
+Write-Host "[3/5] Coletando e analisando Tarefas Agendadas..." -ForegroundColor Cyan
 
 $rawTasks = Get-ScheduledTask -ErrorAction SilentlyContinue
 $tasksReport = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -380,7 +490,10 @@ $rawTasks | ForEach-Object {
     })
 }
 
-Write-Host "[3/4] Coletando e analisando Conexoes de Rede..." -ForegroundColor Cyan
+# ==============================================================================
+# 4. MÓDULO: CONEXÕES DE REDE ATIVAS
+# ==============================================================================
+Write-Host "[4/5] Coletando e analisando Conexoes de Rede..." -ForegroundColor Cyan
 
 $procMap = @{}
 Get-CimInstance Win32_Process | ForEach-Object {
@@ -391,7 +504,6 @@ Get-CimInstance Win32_Process | ForEach-Object {
     }
 }
 
-$SuspiciousPorts = @(4444, 5555, 1337, 31337, 8888, 9999, 6667, 7777, 8081, 9001, 1080)
 $connectionsReport = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 $tcpList = Get-NetTCPConnection -ErrorAction SilentlyContinue
@@ -474,7 +586,10 @@ $udpList | ForEach-Object {
     })
 }
 
-Write-Host "[4/4] Coletando e analisando Persistencia no Registro..." -ForegroundColor Cyan
+# ==============================================================================
+# 5. MÓDULO: PERSISTÊNCIA NO REGISTRO (ASEPs)
+# ==============================================================================
+Write-Host "[5/5] Coletando e analisando Persistencia no Registro..." -ForegroundColor Cyan
 
 $regTargets = @(
     @{ Hive = "LocalMachine"; Path = "Software\Microsoft\Windows\CurrentVersion\Run"; Category = "HKLM Run" },
@@ -570,10 +685,12 @@ $regTargets | ForEach-Object {
     catch {}
 }
 
-$suspTasksCount = @($tasksReport | Where-Object { $_.IsSuspicious }).Count
-$suspConnCount  = @($connectionsReport | Where-Object { $_.IsSuspicious }).Count
-$suspRegCount   = @($registryReport | Where-Object { $_.IsSuspicious }).Count
-$totalThreats   = $totalEventAlerts + $suspTasksCount + $suspConnCount + $suspRegCount
+# Totais consolidados
+$suspSysmonCount = @($sysmonReport | Where-Object { $_.IsSuspicious }).Count
+$suspTasksCount  = @($tasksReport | Where-Object { $_.IsSuspicious }).Count
+$suspConnCount   = @($connectionsReport | Where-Object { $_.IsSuspicious }).Count
+$suspRegCount    = @($registryReport | Where-Object { $_.IsSuspicious }).Count
+$totalThreats    = $totalEventAlerts + $suspSysmonCount + $suspTasksCount + $suspConnCount + $suspRegCount
 
 Write-Host "[+] Compilando dashboard unificado..." -ForegroundColor Yellow
 
@@ -587,11 +704,11 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine('    <style>')
 [void]$sb.AppendLine('        * { box-sizing: border-box; }')
 [void]$sb.AppendLine('        body { margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; }')
-[void]$sb.AppendLine('        .container { max-width: 1700px; margin: auto; }')
+[void]$sb.AppendLine('        .container { max-width: 1750px; margin: auto; }')
 [void]$sb.AppendLine('        .header { background: #1e293b; padding: 22px 28px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }')
 [void]$sb.AppendLine('        .header h1 { margin: 0 0 6px 0; font-size: 22px; font-weight: 600; }')
 [void]$sb.AppendLine('        .header p { margin: 0; color: #94a3b8; font-size: 13px; }')
-[void]$sb.AppendLine('        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }')
+[void]$sb.AppendLine('        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }')
 [void]$sb.AppendLine('        .card { background: #1e293b; padding: 16px 20px; border-radius: 10px; border: 1px solid #334155; }')
 [void]$sb.AppendLine('        .card-title { font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; }')
 [void]$sb.AppendLine('        .card-val { font-size: 26px; font-weight: bold; margin-top: 6px; }')
@@ -639,25 +756,28 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine('<body>')
 [void]$sb.AppendLine('<div class="container">')
 
+# Cabeçalho
 [void]$sb.AppendLine('    <div class="header">')
 [void]$sb.AppendLine('        <div>')
-[void]$sb.AppendLine('            <h1>Dashboard Unificado de Auditoria de Seguranca</h1>')
+[void]$sb.AppendLine('            <h1>Dashboard Unificado de Auditoria e Cacador de Ameacas</h1>')
 [void]$sb.AppendLine("            <p>Host: <strong>$($env:COMPUTERNAME)</strong> | Periodo: $($startDate.ToString('dd/MM/yyyy')) ate $($endDate.ToString('dd/MM/yyyy')) | Gerado: $(Get-Date -Format 'dd/MM/yyyy HH:mm')</p>")
 [void]$sb.AppendLine('        </div>')
 [void]$sb.AppendLine('    </div>')
 
 $generalCrit = if ($totalThreats -gt 0) { "crit" } else { "safe" }
 [void]$sb.AppendLine('    <div class="cards">')
-[void]$sb.AppendLine("        <div class='card'><div class='card-title'>Total Alertas EventLog</div><div class='card-val crit'>$totalEventAlerts</div></div>")
-[void]$sb.AppendLine("        <div class='card'><div class='card-title'>Eventos Criticos</div><div class='card-val crit'>$critCount</div></div>")
+[void]$sb.AppendLine("        <div class='card'><div class='card-title'>Alertas EventLog</div><div class='card-val crit'>$totalEventAlerts</div></div>")
+[void]$sb.AppendLine("        <div class='card'><div class='card-title'>Alertas Sysmon</div><div class='card-val crit'>$suspSysmonCount</div></div>")
 [void]$sb.AppendLine("        <div class='card'><div class='card-title'>Tarefas Suspeitas</div><div class='card-val warn'>$suspTasksCount</div></div>")
 [void]$sb.AppendLine("        <div class='card'><div class='card-title'>Conexoes Suspeitas</div><div class='card-val warn'>$suspConnCount</div></div>")
 [void]$sb.AppendLine("        <div class='card'><div class='card-title'>Persistencia Registro</div><div class='card-val warn'>$suspRegCount</div></div>")
-[void]$sb.AppendLine("        <div class='card'><div class='card-title'>Total Geral Ameacas</div><div class='card-val $generalCrit'>$totalThreats</div></div>")
+[void]$sb.AppendLine("        <div class='card'><div class='card-title'>Total Ameacas</div><div class='card-val $generalCrit'>$totalThreats</div></div>")
 [void]$sb.AppendLine('    </div>')
 
+# Navegação das Abas
 [void]$sb.AppendLine('    <div class="nav-tabs">')
-[void]$sb.AppendLine("        <button class='tab-btn active' onclick='switchTab(""eventsTab"", this)'>Eventos de Seguranca ($totalEventAlerts)</button>")
+[void]$sb.AppendLine("        <button class='tab-btn active' onclick='switchTab(""eventsTab"", this)'>Eventos do Windows ($totalEventAlerts)</button>")
+[void]$sb.AppendLine("        <button class='tab-btn' onclick='switchTab(""sysmonTab"", this)'>Sysmon Telemetria ($($sysmonReport.Count))</button>")
 [void]$sb.AppendLine("        <button class='tab-btn' onclick='switchTab(""tasksTab"", this)'>Tarefas Agendadas ($($tasksReport.Count))</button>")
 [void]$sb.AppendLine("        <button class='tab-btn' onclick='switchTab(""connectionsTab"", this)'>Conexoes de Rede ($($connectionsReport.Count))</button>")
 [void]$sb.AppendLine("        <button class='tab-btn' onclick='switchTab(""registryTab"", this)'>Persistencia no Registro ($($registryReport.Count))</button>")
@@ -703,7 +823,42 @@ $eventAlerts | ForEach-Object {
 [void]$sb.AppendLine('        </table>')
 [void]$sb.AppendLine('    </div>')
 
-# ABA 2: Tarefas
+# ABA 2: Sysmon
+[void]$sb.AppendLine('    <div id="sysmonTab" class="tab-content">')
+[void]$sb.AppendLine('        <div class="controls">')
+[void]$sb.AppendLine('            <input type="text" id="sysmonSearch" onkeyup="filterGeneric(''sysmonSearch'', ''tableSysmon'')" placeholder="Buscar por executavel, comando, DNS, arquivo ou porta...">')
+[void]$sb.AppendLine('            <button class="btn-filter" id="btnSysmonSusp" onclick="toggleSuspiciousOnly(''tableSysmon'', this)">Apenas Suspeitas</button>')
+[void]$sb.AppendLine('        </div>')
+[void]$sb.AppendLine('        <table id="tableSysmon">')
+[void]$sb.AppendLine('            <thead><tr><th>Status</th><th>ID</th><th>Tipo de Evento</th><th>Data/Hora</th><th>Processo Principal</th><th>Detalhes / Linha de Comando</th><th>Contexto Extra</th><th>Diagnostico</th></tr></thead>')
+[void]$sb.AppendLine('            <tbody>')
+
+$sysmonReport | ForEach-Object {
+    $s =$_
+    $trClass = if ($s.IsSuspicious) { "suspicious" } else { "normal" }
+    $badge   = if ($s.IsSuspicious) { "<span class='badge badge-crit'>Alerta</span>" } else { "<span class='badge badge-ok'>OK</span>" }
+    $sProc   = [System.Net.WebUtility]::HtmlEncode([string]$s.ProcessName)
+    $sDet    = [System.Net.WebUtility]::HtmlEncode([string]$s.Details)
+    $sExtra  = [System.Net.WebUtility]::HtmlEncode([string]$s.ExtraInfo)
+    $sRisk   = [System.Net.WebUtility]::HtmlEncode([string]$s.RiskReason)
+    $isSusp  =$s.IsSuspicious.ToString().ToLower()
+
+    [void]$sb.AppendLine("                <tr class='$trClass' data-suspicious='$isSusp'>")
+    [void]$sb.AppendLine("                    <td>$badge</td>")
+    [void]$sb.AppendLine("                    <td><strong>$($s.EventId)</strong></td>")
+    [void]$sb.AppendLine("                    <td><strong>$($s.EventType)</strong></td>")
+    [void]$sb.AppendLine("                    <td>$($s.TimeCreated.ToString('dd/MM/yyyy HH:mm:ss'))</td>")
+    [void]$sb.AppendLine("                    <td class='path'>$sProc</td>")
+    [void]$sb.AppendLine("                    <td class='code'>$sDet</td>")
+    [void]$sb.AppendLine("                    <td>$sExtra</td>")
+    [void]$sb.AppendLine("                    <td>$sRisk</td>")
+    [void]$sb.AppendLine("                </tr>")
+}
+[void]$sb.AppendLine('            </tbody>')
+[void]$sb.AppendLine('        </table>')
+[void]$sb.AppendLine('    </div>')
+
+# ABA 3: Tarefas
 [void]$sb.AppendLine('    <div id="tasksTab" class="tab-content">')
 [void]$sb.AppendLine('        <div class="controls">')
 [void]$sb.AppendLine('            <input type="text" id="taskSearch" onkeyup="filterGeneric(''taskSearch'', ''tableTasks'')" placeholder="Buscar por tarefa, pasta, executavel ou comando...">')
@@ -737,7 +892,7 @@ $tasksReport | ForEach-Object {
 [void]$sb.AppendLine('        </table>')
 [void]$sb.AppendLine('    </div>')
 
-# ABA 3: Conexoes
+# ABA 4: Conexoes
 [void]$sb.AppendLine('    <div id="connectionsTab" class="tab-content">')
 [void]$sb.AppendLine('        <div class="controls">')
 [void]$sb.AppendLine('            <input type="text" id="connSearch" onkeyup="filterGeneric(''connSearch'', ''tableConns'')" placeholder="Buscar por IP, porta, executavel, PID ou processo...">')
@@ -771,7 +926,7 @@ $connectionsReport | ForEach-Object {
 [void]$sb.AppendLine('        </table>')
 [void]$sb.AppendLine('    </div>')
 
-# ABA 4: Registro
+# ABA 5: Registro
 [void]$sb.AppendLine('    <div id="registryTab" class="tab-content">')
 [void]$sb.AppendLine('        <div class="controls">')
 [void]$sb.AppendLine('            <input type="text" id="regSearch" onkeyup="filterGeneric(''regSearch'', ''tableReg'')" placeholder="Buscar por chave, valor, arquivo ou argumento...">')
@@ -861,11 +1016,12 @@ $utf8WithBom = New-Object System.Text.UTF8Encoding($true)
 
 Write-Host ""
 Write-Host "===================================================================" -ForegroundColor Green
-Write-Host "[OK] Dashboard Consolidado gerado com sucesso!" -ForegroundColor Green
+Write-Host "[OK] Dashboard Consolidado com Sysmon gerado com sucesso!" -ForegroundColor Green
 Write-Host "Arquivo: $OutputPath" -ForegroundColor Cyan
 Write-Host "===================================================================" -ForegroundColor Green
 Write-Host "Resumo de Alertas Encontrados:"
-Write-Host " - Eventos de Seguranca : $totalEventAlerts (Criticos: $critCount \vert{} Altos:$highCount)"
+Write-Host " - Eventos de Seguranca : $totalEventAlerts"
+Write-Host " - Telemetria Sysmon    : $suspSysmonCount suspeitas"
 Write-Host " - Tarefas Agendadas    : $suspTasksCount suspeitas"
 Write-Host " - Conexoes de Rede     : $suspConnCount suspeitas"
 Write-Host " - Persistencia Registro: $suspRegCount suspeitas"
