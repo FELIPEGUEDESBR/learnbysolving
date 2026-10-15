@@ -1,0 +1,6 @@
+CREATE TABLE Documents (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    FileName NVARCHAR(255),
+    SectionTitle NVARCHAR(255),
+    Content NVARCHAR(MAX)
+);
