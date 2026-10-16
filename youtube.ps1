@@ -1,1 +1,0 @@
-yt-dlp --write-auto-sub --sub-lang "pt" --skip-download --convert-subs srt "https://youtu.be/J7t4tV3_sJs"; Get-Content *.srt -Encoding UTF8| ForEach-Object {$_ -replace '<[^>]*>', ''} | Where-Object {$_ -notmatch '^[0-9]+$' -and $_ -notmatch '^$' -and $_ -notmatch '-->'} | fabric.exe --pattern create_markmap_visualization -g=pt -m="gemini-2.5-flash" -o=hist_71a74.txt 

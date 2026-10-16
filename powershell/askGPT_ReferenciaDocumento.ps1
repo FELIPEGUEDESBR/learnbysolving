@@ -190,7 +190,7 @@ ORDER BY Id;
 # ============================================================
 
 $Form = New-Object System.Windows.Forms.Form
-$Form.Text = "Poseys AI Chatbot"
+$Form.Text = "AI Chatbot"
 $Form.Size = New-Object System.Drawing.Size(1920, 1080)
 $Form.MinimumSize = New-Object System.Drawing.Size(900, 650)
 $Form.StartPosition = "CenterScreen"
