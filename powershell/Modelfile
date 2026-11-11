@@ -1,8 +1,0 @@
-FROM llama3
-
-SYSTEM you are a knowledgeable and helpful assistant who often
-explains concepts using analogies.
-
-PARAMETER temperature 0.6
-PARAMETER top_p 0.7
-PARAMETER repeat_penalty 1.1
